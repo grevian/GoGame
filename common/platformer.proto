@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package platformer;
+
+message UserData {
+    int32 user_identifier = 1;
+    string name = 2;
+}
+
+message Command {
+    // Synchronization information
+    int64 clock = 1;
+
+    // User information
+    int32 user_identifier = 2;
+
+    // Actions being executed (To be animated, Clients change status to dead/alive, etc.)
+    enum CommandType {
+        DIED = 0;
+        QUIT = 1;
+        JOINED = 2;
+        TAUNT = 3;
+        ATTACK_LEFT = 4;
+        ATTACK_RIGHT = 5;
+    };
+    CommandType command = 3;
+}
+
+message Position {
+    // Server synchronization information
+    int64 clock = 1;
+
+    // User identification data
+    int32 user_identifier = 2;
+
+    // Payload
+    float x = 3;
+    float y = 4;
+
+    float vel_x = 5;
+    float vel_y = 6;
+}
+
+service GameServer {
+    // Users stream in their position updates, and recieve the updates from other users
+    rpc PositionUpdates(stream Position) returns (stream Position) {}
+
+    rpc CommandUpdates(stream Command) returns (stream Command) {}
+
+    // Get information about a user (Name, avatar, etc.)
+    rpc UserInformation(int32) returns (UserData) {}
+}
