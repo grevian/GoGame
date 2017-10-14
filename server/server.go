@@ -8,7 +8,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	pb "github.com/grevian/GoGame/common/platformer"
-	"github.com/grevian/GoGame/server/auth"
+	"./auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -23,8 +23,8 @@ func main() {
 		authAddr      = flag.String("auth-listen-addr", "0.0.0.0:8078", "HTTP listen address.")
 		tlsCert       = flag.String("tls-cert", "/cert.pem", "TLS server certificate.")
 		tlsKey        = flag.String("tls-key", "/key.pem", "TLS server key.")
-		jwtPublicKey  = flag.String("jwt-public-key", "/jwt.pem", "The JWT RSA public key.")
-		jwtPrivateKey = flag.String("jwt-private-key", "/jwt-private.pem", "The JWT RSA private key.")
+		jwtPublicKey  = flag.String("jwt-public-key", "certs/jwt.pub.pem", "The JWT RSA public key.")
+		jwtPrivateKey = flag.String("jwt-private-key", "certs/jwt.key", "The JWT RSA private key.")
 	)
 	flag.Parse()
 
@@ -39,6 +39,7 @@ func main() {
 	}
 
 	transportCredentials := credentials.NewTLS(&tls.Config{
+		InsecureSkipVerify: true,
 		Certificates: []tls.Certificate{cert},
 	})
 
@@ -51,10 +52,12 @@ func main() {
 		log.WithField("authAddr", *authAddr).WithError(err).Fatal("Failed to start listening on the network")
 	}
 	go func() {
+		log.Info("Starting to serve Auth Service")
 		err := authService.Serve(aln)
 		if err != nil {
 			log.WithError(err).Error("Auth Service stopped unexpectedly")
 		}
+		log.Info("Auth Service stopped")
 	}()
 
 	// Create an instance of our game service
@@ -75,9 +78,10 @@ func main() {
 	}
 
 	// This will block forever, use s.GracefulStop() or s.Stop() from a signal handler or control service or whatever
+	log.Info("Starting to serve Game Service")
 	err = s.Serve(ln)
 	if err != nil {
-		log.WithError(err).Panic("Server terminated unexpectedly!")
+		log.WithError(err).Panic("Game service terminated unexpectedly!")
 	}
-	log.Info("Server terminated normally")
+	log.Info("Game service terminated normally")
 }
