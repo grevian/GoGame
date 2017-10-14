@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package jwtserver;
+
+message Credentials {
+    string username = 1;
+    string password = 2;
+
+    // Optionally instead of a password, provide a certificate issued by the auth servers CA
+    string certificate = 3;
+}
+
+// A token signed with the private key of the auth server containing user identification
+message JWT {
+    string token = 1;
+}
+
+// Confirmation of a session being logged out
+message LogoutResponse {}
+
+service AuthServer {
+    // Provide credentials, A stream of tokens will be returned with new tokens being issued as previous ones expire
+    rpc Authorize(Credentials) returns (stream JWT) {}
+
+    // Stop issuing tokens for the given user until they re-authorize
+    rpc Logout(JWT) returns (LogoutResponse) {}
+
+}
