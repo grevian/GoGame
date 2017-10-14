@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package jwtserver;
+package auth;
 
 message Credentials {
     string username = 1;
