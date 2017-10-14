@@ -11,6 +11,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"net"
 )
 
 type AuthorizationServer struct {
@@ -30,15 +31,18 @@ func NewAuthServer(rsaPrivateKeyPath *string, transportCredentials credentials.T
 		return nil, fmt.Errorf("error parsing the jwt public key: %s", err)
 	}
 
-	s := grpc.NewServer(grpc.Creds(transportCredentials))
 	authServer := &AuthorizationServer{
 		jwtPrivateKey:        privateKey,
 		transportCredentials: transportCredentials,
 	}
 
-	pb_auth.RegisterAuthServerServer(s, authServer)
-
 	return authServer, nil
+}
+
+func (a *AuthorizationServer) Serve(listener net.Listener) error {
+	s := grpc.NewServer(grpc.Creds(a.transportCredentials))
+	pb_auth.RegisterAuthServerServer(s, a)
+	return s.Serve(listener)
 }
 
 func (a *AuthorizationServer) Authorize(c *pb_auth.Credentials, tokenStream pb_auth.AuthServer_AuthorizeServer) error {

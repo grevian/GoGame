@@ -96,10 +96,7 @@ func main() {
 	})
 
 	// Create our Authorization server
-	authServer, err := auth.NewAuthServer(jwtPrivateKey, transportCredentials)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to create Authorization Server")
-	}
+	authService, err := auth.NewAuthServer(jwtPrivateKey, transportCredentials)
 
 	// Serve our auth service on the network
 	aln, err := net.Listen("tcp", *authAddr)
@@ -107,7 +104,7 @@ func main() {
 		log.WithField("authAddr", *authAddr).WithError(err).Fatal("Failed to start listening on the network")
 	}
 	go func() {
-		err := authServer.Serve(aln)
+		err := authService.Serve(aln)
 		if err != nil {
 			log.WithError(err).Error("Auth Service stopped unexpectedly")
 		}
