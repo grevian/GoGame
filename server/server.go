@@ -1,72 +1,19 @@
 package main
 
 import (
-	"crypto/rsa"
 	"crypto/tls"
 	"flag"
-	"fmt"
-	"io/ioutil"
 
 	"net"
 
-	"context"
-
 	log "github.com/Sirupsen/logrus"
-	"github.com/dgrijalva/jwt-go"
 	pb "github.com/grevian/GoGame/common/platformer"
 	"github.com/grevian/GoGame/server/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
+
+	"./platformer"
 )
-
-type GameServer struct {
-	jwtPublicKey *rsa.PublicKey
-}
-
-func (g *GameServer) validateTokenFromContext(ctx context.Context) (*jwt.Token, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, fmt.Errorf("expected metadata wasn't present on request")
-	}
-
-	tokenStr, ok := md["authorization"]
-	if !ok {
-		return nil, fmt.Errorf("expected metadata wasn't present on request")
-	}
-
-	token, err := jwt.Parse(tokenStr[0], func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
-			log.WithField("algorithm", t.Header["alg"]).Error("Unexpected signing method")
-			return nil, fmt.Errorf("invalid token")
-		}
-		return g.jwtPublicKey, nil
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse token string: %s", err)
-	}
-
-	if !token.Valid {
-		return nil, fmt.Errorf("token was not valid: %s", token.Valid)
-	}
-
-	return token, nil
-}
-
-func NewServer(rsaPublicKey string) (*GameServer, error) {
-	data, err := ioutil.ReadFile(rsaPublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("error reading the jwt public key: %v", err)
-	}
-
-	publickey, err := jwt.ParseRSAPublicKeyFromPEM(data)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing the jwt public key: %s", err)
-	}
-
-	return &GameServer{publickey}, nil
-}
 
 func main() {
 	log.Info("Server Starting up")
@@ -110,14 +57,13 @@ func main() {
 		}
 	}()
 
-	// Create a new grpc https server that will validate against the provided transport credentials
-	s := grpc.NewServer(grpc.Creds(transportCredentials))
-
 	// Create an instance of our game service
-	gs, err := NewServer(*jwtPublicKey)
+	gs, err := platformer.NewGameServer(*jwtPublicKey, transportCredentials)
 	if err != nil {
 		log.WithField("jwtPublicKey", *jwtPublicKey).WithError(err).Fatal("Could not start server")
 	}
+
+	s := grpc.NewServer(grpc.Creds(transportCredentials))
 
 	// Register our game service with the grpc server
 	pb.RegisterGameServerServer(s, gs)
