@@ -13,6 +13,7 @@ import (
 
 var mainLevel *Level
 var usersCharacter *Character
+var network *NetworkClient
 
 func update(screen *ebiten.Image) error {
 
@@ -38,7 +39,19 @@ func reset() {
 func NewClient() {
 
 	reset()
+	username := "grevian"
+	password := "foobar"
+	certpath := "CA.pem"
+	pubkey := "pub.pem"
 
+	gnetwork, err := NewNetworkClient(&username, &password, &certpath, &pubkey)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to connect to network")
+	} else {
+		network = gnetwork
+	}
+
+	ebiten.SetRunnableInBackground(true)
 	if err := ebiten.Run(update, 800, 600, 2, "Little Platformer"); err != nil {
 		log.WithError(err).Fatal("Ebiten Stopped unexpectedly!")
 	}
