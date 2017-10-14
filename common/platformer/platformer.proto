@@ -48,5 +48,6 @@ service GameServer {
     rpc CommandUpdates(stream Command) returns (stream Command) {}
 
     // Get information about a user (Name, avatar, etc.)
-    rpc UserInformation(int32) returns (UserData) {}
+    // Only the user_identifier need be filled in
+    rpc UserInformation(UserData) returns (UserData) {}
 }
