@@ -24,6 +24,7 @@ func update(screen *ebiten.Image) error {
 	mainLevel.Draw(screen)
 	usersCharacter.Update(mainLevel)
 	usersCharacter.Draw(screen)
+	network.Update(usersCharacter)
 
 	msg := fmt.Sprintf("FPS: %0.2f, Grounded: %t, Forces: %v", ebiten.CurrentFPS(), usersCharacter.grounded, usersCharacter.forces)
 
@@ -41,15 +42,14 @@ func NewClient() {
 	reset()
 	username := "grevian"
 	password := "foobar"
-	certpath := "CA.pem"
-	pubkey := "pub.pem"
+	certpath := "certs/server.crt"
+	pubkey := "certs/jwt.pub.pem"
 
 	gnetwork, err := NewNetworkClient(&username, &password, &certpath, &pubkey)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to connect to network")
-	} else {
-		network = gnetwork
 	}
+	network = gnetwork
 
 	ebiten.SetRunnableInBackground(true)
 	if err := ebiten.Run(update, 800, 600, 2, "Little Platformer"); err != nil {

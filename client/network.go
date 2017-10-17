@@ -10,14 +10,19 @@ import (
 	pb "github.com/grevian/GoGame/common/platformer"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"context"
 )
 
-const GAMESERVER_ADDRESS = "localhost:8078"
+const GAMESERVER_ADDRESS = "localhost:8077"
 
 type NetworkClient struct {
 	tlsCredentials credentials.TransportCredentials
 	rpcCredentials credentials.PerRPCCredentials
 	gameClient     pb.GameServerClient
+
+	// Bidirectional streams used to send and receive server interactions
+	commandStream pb.GameServer_CommandUpdatesClient
+	positionStream pb.GameServer_PositionUpdatesClient
 }
 
 func NewNetworkClient(username *string, password *string, certPath *string, jwtPublicKeyPath *string) (*NetworkClient, error) {
@@ -33,6 +38,7 @@ func NewNetworkClient(username *string, password *string, certPath *string, jwtP
 	caCertPool.AppendCertsFromPEM(rawCACert)
 
 	transportCredentials := credentials.NewTLS(&tls.Config{
+		InsecureSkipVerify: true,
 		RootCAs: caCertPool,
 	})
 
@@ -57,13 +63,57 @@ func NewNetworkClient(username *string, password *string, certPath *string, jwtP
 	// Connect to the game service
 	gameClient := pb.NewGameServerClient(conn)
 
+	commandStream, err := gameClient.CommandUpdates(context.Background())
+	if err != nil {
+		log.WithError(err).Error("Could not open command stream")
+		return nil, err
+	}
+
+	positionStream, err := gameClient.PositionUpdates(context.Background())
+	if err != nil {
+		log.WithError(err).Error("Could not open position stream")
+		return nil, err
+	}
+
+	// Load position updates waiting from any other characters
+	go func() {
+		for {
+			positionUpdate, err := positionStream.Recv()
+			if err != nil {
+				log.WithError(err).Error("Unexpected error on player position data stream")
+				return
+			}
+			// TODO Apply position update
+			// TODO Need to change position stream to deal with wrapped positions that include player data
+			log.WithField("User", positionUpdate.UserIdentifier).Debug("Position Updated")
+		}
+	}()
+
+
 	return &NetworkClient{
 		tlsCredentials: transportCredentials,
 		rpcCredentials: authTokenFetcher,
 		gameClient:     gameClient,
+
+		commandStream: commandStream,
+		positionStream: positionStream,
 	}, nil
 }
 
 func (l *NetworkClient) Update(character *Character) {
 	// Send an update on character positions
+	position := pb.Position{
+		X: 45.0,
+		Y: 45.0,
+	}
+
+	if l.positionStream != nil {
+		err := l.positionStream.Send(&position)
+
+		if err != nil {
+			log.WithError(err).Error("Failed to send position update")
+			l.positionStream.CloseSend()
+			l.positionStream = nil
+		}
+	}
 }

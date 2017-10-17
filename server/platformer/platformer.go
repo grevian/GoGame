@@ -9,6 +9,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"github.com/dgrijalva/jwt-go"
 )
 
 type GameServer struct {
@@ -38,8 +39,26 @@ func (g *GameServer) Serve(listener net.Listener) error {
 	return s.Serve(listener)
 }
 
-func (g *GameServer) PositionUpdates(server pb.GameServer_PositionUpdatesServer) error {
-	log.Error("PositionUpdates called, but is not yet implemented")
+func (g *GameServer) PositionUpdates(positionStream pb.GameServer_PositionUpdatesServer) error {
+	token, err := g.validateTokenFromContext(positionStream.Context())
+	if err != nil {
+		log.WithError(err).Error("Invalid Token")
+		return err
+	}
+	claims := token.Claims.(jwt.MapClaims)
+
+	// TODO Load more information about the user from the game service
+	username := claims["user"]
+
+	for {
+		positionUpdate, err := positionStream.Recv()
+		if err != nil {
+			log.WithError(err).WithField("username", username).Error("Unexpected error occurred reading from positionStream")
+			return err
+		}
+		// TODO Sync players position update to other players/shared state
+		_ = positionUpdate
+	}
 	return nil
 }
 

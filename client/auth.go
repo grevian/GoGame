@@ -17,7 +17,7 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-const AUTHSERVER_ADDRESS = "localhost:8077"
+const AUTHSERVER_ADDRESS = "localhost:8078"
 
 type AuthServiceTokenFetcher struct {
 	authClient     pb_auth.AuthServerClient
