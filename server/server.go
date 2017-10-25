@@ -8,10 +8,10 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	pb "github.com/grevian/GoGame/common/platformer"
-	"./auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"./auth"
 	"./platformer"
 )
 
@@ -40,7 +40,7 @@ func main() {
 
 	transportCredentials := credentials.NewTLS(&tls.Config{
 		InsecureSkipVerify: true,
-		Certificates: []tls.Certificate{cert},
+		Certificates:       []tls.Certificate{cert},
 	})
 
 	// Create our Authorization server

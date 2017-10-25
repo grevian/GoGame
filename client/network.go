@@ -5,12 +5,13 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 
+	"context"
+
 	log "github.com/Sirupsen/logrus"
 	pb_auth "github.com/grevian/GoGame/common/auth"
 	pb "github.com/grevian/GoGame/common/platformer"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"context"
 )
 
 const GAMESERVER_ADDRESS = "localhost:8077"
@@ -20,9 +21,10 @@ type NetworkClient struct {
 	rpcCredentials credentials.PerRPCCredentials
 	gameClient     pb.GameServerClient
 
-	// Bidirectional streams used to send and receive server interactions
-	commandStream pb.GameServer_CommandUpdatesClient
-	positionStream pb.GameServer_PositionUpdatesClient
+	// Bidirectional stream used to send and receive server interactions
+	updateStream pb.GameServer_ConnectClient
+
+	networkClock int64
 }
 
 func NewNetworkClient(username *string, password *string, certPath *string, jwtPublicKeyPath *string) (*NetworkClient, error) {
@@ -39,7 +41,7 @@ func NewNetworkClient(username *string, password *string, certPath *string, jwtP
 
 	transportCredentials := credentials.NewTLS(&tls.Config{
 		InsecureSkipVerify: true,
-		RootCAs: caCertPool,
+		RootCAs:            caCertPool,
 	})
 
 	// Instantiate a client for the auth service, that will fetch per-request credentials
@@ -63,57 +65,82 @@ func NewNetworkClient(username *string, password *string, certPath *string, jwtP
 	// Connect to the game service
 	gameClient := pb.NewGameServerClient(conn)
 
-	commandStream, err := gameClient.CommandUpdates(context.Background())
+	updateStream, err := gameClient.Connect(context.Background())
 	if err != nil {
-		log.WithError(err).Error("Could not open command stream")
+		log.WithError(err).Error("Could not open update stream")
 		return nil, err
 	}
-
-	positionStream, err := gameClient.PositionUpdates(context.Background())
-	if err != nil {
-		log.WithError(err).Error("Could not open position stream")
-		return nil, err
-	}
-
-	// Load position updates waiting from any other characters
-	go func() {
-		for {
-			positionUpdate, err := positionStream.Recv()
-			if err != nil {
-				log.WithError(err).Error("Unexpected error on player position data stream")
-				return
-			}
-			// TODO Apply position update
-			// TODO Need to change position stream to deal with wrapped positions that include player data
-			log.WithField("User", positionUpdate.UserIdentifier).Debug("Position Updated")
-		}
-	}()
-
 
 	return &NetworkClient{
 		tlsCredentials: transportCredentials,
 		rpcCredentials: authTokenFetcher,
 		gameClient:     gameClient,
 
-		commandStream: commandStream,
-		positionStream: positionStream,
+		updateStream: updateStream,
+
+		networkClock: 0,
 	}, nil
+}
+
+func (l *NetworkClient) Reset(character *Character) {
+	quitCmd := pb.ClientUpdate{
+		UpdatePayload: &pb.ClientUpdate_C{
+			C: &pb.Command{
+				Command: pb.Command_QUIT,
+			},
+		},
+	}
+
+	joinCmd := pb.ClientUpdate{
+		UpdatePayload: &pb.ClientUpdate_C{
+			C: &pb.Command{
+				Command: pb.Command_JOINED,
+			},
+		},
+	}
+
+	l.updateStream.Send(&quitCmd)
+	l.updateStream.Send(&joinCmd)
 }
 
 func (l *NetworkClient) Update(character *Character) {
 	// Send an update on character positions
 	position := pb.Position{
-		X: 45.0,
-		Y: 45.0,
+		X:    float32(character.X),
+		Y:    float32(character.Y),
+		VelX: float32(character.forces[0]),
+		VelY: float32(character.forces[1]),
 	}
 
-	if l.positionStream != nil {
-		err := l.positionStream.Send(&position)
+	update := &pb.ClientUpdate{
+		UpdatePayload: &pb.ClientUpdate_P{
+			P: &position,
+		},
+	}
 
-		if err != nil {
-			log.WithError(err).Error("Failed to send position update")
-			l.positionStream.CloseSend()
-			l.positionStream = nil
+	err := l.updateStream.Send(update)
+
+	if err != nil {
+		log.WithError(err).Error("Failed to send update")
+		l.updateStream.CloseSend()
+		l.updateStream = nil
+	}
+
+	// Load position updates waiting from any other characters
+	go func() {
+		for {
+			serverUpdate, err := l.updateStream.Recv()
+			if err != nil {
+				log.WithError(err).Error("Unexpected error on update data stream")
+				return
+			}
+
+			// TODO Apply position update
+			// TODO Need to change position stream to deal with wrapped positions that include player data
+			log.WithFields(log.Fields{
+				"User":   serverUpdate.UserIdentifier,
+				"Update": serverUpdate.String(),
+			}).Debug("Update Received")
 		}
-	}
+	}()
 }

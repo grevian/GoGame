@@ -4,17 +4,22 @@ import (
 	"crypto/rsa"
 	"net"
 
+	"time"
+
 	log "github.com/Sirupsen/logrus"
+	"github.com/dgrijalva/jwt-go"
 	pb "github.com/grevian/GoGame/common/platformer"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"github.com/dgrijalva/jwt-go"
 )
 
 type GameServer struct {
 	jwtPublicKey         *rsa.PublicKey
 	transportCredentials credentials.TransportCredentials
+
+	level   *Level
+	players map[string]*Character
 }
 
 func NewGameServer(publicKeyPath string, transportCredentials credentials.TransportCredentials) (*GameServer, error) {
@@ -24,8 +29,10 @@ func NewGameServer(publicKeyPath string, transportCredentials credentials.Transp
 	}
 
 	return &GameServer{
+		players:              make(map[string]*Character),
 		jwtPublicKey:         publicKey,
 		transportCredentials: transportCredentials,
+		level:                NewLevel(),
 	}, nil
 }
 
@@ -39,8 +46,8 @@ func (g *GameServer) Serve(listener net.Listener) error {
 	return s.Serve(listener)
 }
 
-func (g *GameServer) PositionUpdates(positionStream pb.GameServer_PositionUpdatesServer) error {
-	token, err := g.validateTokenFromContext(positionStream.Context())
+func (g *GameServer) Connect(updateStream pb.GameServer_ConnectServer) error {
+	token, err := g.validateTokenFromContext(updateStream.Context())
 	if err != nil {
 		log.WithError(err).Error("Invalid Token")
 		return err
@@ -48,23 +55,32 @@ func (g *GameServer) PositionUpdates(positionStream pb.GameServer_PositionUpdate
 	claims := token.Claims.(jwt.MapClaims)
 
 	// TODO Load more information about the user from the game service
-	username := claims["user"]
+	username := claims["user"].(string)
+	var user_id int32 = 0
 
+	log.WithField("user", username).Info("User Connected")
+	character := NewNetworkCharacter(140, 310, &User{name: username}, updateStream)
+	g.players[username] = character
+
+	var updates []*pb.ServerUpdate
 	for {
-		positionUpdate, err := positionStream.Recv()
-		if err != nil {
-			log.WithError(err).WithField("username", username).Error("Unexpected error occurred reading from positionStream")
-			return err
-		}
-		// TODO Sync players position update to other players/shared state
-		_ = positionUpdate
-	}
-	return nil
-}
+		select {
+		case <-time.After(time.Millisecond * 16):
+			updates = character.Tick(g.level, 500)
 
-func (g *GameServer) CommandUpdates(server pb.GameServer_CommandUpdatesServer) error {
-	log.Error("CommandUpdates called, but is not yet implemented")
-	return nil
+			// For all updates we're about to send, identify them as coming from this user
+			// then distribute them to other users
+			for i := range updates {
+				updates[i].UserIdentifier = user_id
+
+				for _, player := range g.players {
+					player.ServerUpdate(updates[i])
+				}
+			}
+
+			_ = updates
+		}
+	}
 }
 
 func (g *GameServer) UserInformation(ctx context.Context, data *pb.UserData) (*pb.UserData, error) {
