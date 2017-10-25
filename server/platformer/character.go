@@ -1,9 +1,8 @@
 package platformer
 
 import (
-	"math"
-
 	"io"
+	"math"
 	"sync"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 
 type User struct {
 	name string
+	id   int32
 }
 
 type Position struct {
@@ -98,6 +98,9 @@ func (c *Character) positionUpdate(position *pb.Position) {
 			"actual_skew_y":  skew_y,
 			"user":           c.user.name,
 		}).Error("Position Update skewed too far, rejecting update and correcting client")
+
+		// c.clientUpdates.Send(	)
+		// TODO send a correction to the client
 		return
 	}
 

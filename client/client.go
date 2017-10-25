@@ -26,6 +26,11 @@ func update(screen *ebiten.Image) error {
 	usersCharacter.Draw(screen)
 	network.Update(usersCharacter)
 
+	// Draw any other players synchronized from the network
+	for _, p := range network.GetPlayers() {
+		p.Draw(screen)
+	}
+
 	msg := fmt.Sprintf("FPS: %0.2f, Grounded: %t, Forces: %v", ebiten.CurrentFPS(), usersCharacter.grounded, usersCharacter.forces)
 
 	ebitenutil.DebugPrint(screen, msg)

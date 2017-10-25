@@ -2,8 +2,8 @@ package platformer
 
 import (
 	"crypto/rsa"
+	"fmt"
 	"net"
-
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -18,8 +18,9 @@ type GameServer struct {
 	jwtPublicKey         *rsa.PublicKey
 	transportCredentials credentials.TransportCredentials
 
-	level   *Level
-	players map[string]*Character
+	level       *Level
+	players     map[string]*Character
+	identifiers int32
 }
 
 func NewGameServer(publicKeyPath string, transportCredentials credentials.TransportCredentials) (*GameServer, error) {
@@ -33,6 +34,7 @@ func NewGameServer(publicKeyPath string, transportCredentials credentials.Transp
 		jwtPublicKey:         publicKey,
 		transportCredentials: transportCredentials,
 		level:                NewLevel(),
+		identifiers:          1,
 	}, nil
 }
 
@@ -54,17 +56,55 @@ func (g *GameServer) Connect(updateStream pb.GameServer_ConnectServer) error {
 	}
 	claims := token.Claims.(jwt.MapClaims)
 
+	// For now since we have no loaded data, just assign an auto-incrementing ID
+	var user_id int32 = g.identifiers
+	g.identifiers += 1
+
 	// TODO Load more information about the user from the game service
 	username := claims["user"].(string)
-	var user_id int32 = 0
+	username = fmt.Sprintf("%s-%d", username, user_id)
 
 	log.WithField("user", username).Info("User Connected")
-	character := NewNetworkCharacter(140, 310, &User{name: username}, updateStream)
+	character := NewNetworkCharacter(140, 310, &User{name: username, id: user_id}, updateStream)
 	g.players[username] = character
+
+	// Assign the new players id and let them know they've joined
+	character.ServerUpdate(&pb.ServerUpdate{
+		UserIdentifier: user_id,
+		UpdatePayload: &pb.ServerUpdate_C{
+			C: &pb.Command{
+				Command: pb.Command_JOINED,
+			},
+		},
+	})
+
+	for _, player := range g.players {
+		// Tell existing players about the new connection
+		if player.user.id != user_id {
+			player.ServerUpdate(&pb.ServerUpdate{
+				UserIdentifier: user_id,
+				UpdatePayload: &pb.ServerUpdate_C{
+					C: &pb.Command{
+						Command: pb.Command_JOINED,
+					},
+				},
+			})
+			// Tell the player about other existing players
+			character.ServerUpdate(&pb.ServerUpdate{
+				UserIdentifier: player.user.id,
+				UpdatePayload: &pb.ServerUpdate_C{
+					C: &pb.Command{
+						Command: pb.Command_JOINED,
+					},
+				},
+			})
+		}
+	}
 
 	var updates []*pb.ServerUpdate
 	for {
 		select {
+		// Server tick should try to match around 60fps clients
 		case <-time.After(time.Millisecond * 16):
 			updates = character.Tick(g.level, 500)
 
@@ -74,7 +114,9 @@ func (g *GameServer) Connect(updateStream pb.GameServer_ConnectServer) error {
 				updates[i].UserIdentifier = user_id
 
 				for _, player := range g.players {
-					player.ServerUpdate(updates[i])
+					if player.user.id != user_id {
+						player.ServerUpdate(updates[i])
+					}
 				}
 			}
 
