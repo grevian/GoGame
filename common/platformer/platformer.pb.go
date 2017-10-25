@@ -11,6 +11,8 @@ It has these top-level messages:
 	UserData
 	Command
 	Position
+	ClientUpdate
+	ServerUpdate
 */
 package platformer
 
@@ -44,6 +46,7 @@ const (
 	Command_TAUNT        Command_CommandType = 3
 	Command_ATTACK_LEFT  Command_CommandType = 4
 	Command_ATTACK_RIGHT Command_CommandType = 5
+	Command_JUMP         Command_CommandType = 6
 )
 
 var Command_CommandType_name = map[int32]string{
@@ -53,6 +56,7 @@ var Command_CommandType_name = map[int32]string{
 	3: "TAUNT",
 	4: "ATTACK_LEFT",
 	5: "ATTACK_RIGHT",
+	6: "JUMP",
 }
 var Command_CommandType_value = map[string]int32{
 	"DIED":         0,
@@ -61,6 +65,7 @@ var Command_CommandType_value = map[string]int32{
 	"TAUNT":        3,
 	"ATTACK_LEFT":  4,
 	"ATTACK_RIGHT": 5,
+	"JUMP":         6,
 }
 
 func (x Command_CommandType) String() string {
@@ -93,31 +98,13 @@ func (m *UserData) GetName() string {
 }
 
 type Command struct {
-	// Synchronization information
-	Clock int64 `protobuf:"varint,1,opt,name=clock" json:"clock,omitempty"`
-	// User information
-	UserIdentifier int32               `protobuf:"varint,2,opt,name=user_identifier,json=userIdentifier" json:"user_identifier,omitempty"`
-	Command        Command_CommandType `protobuf:"varint,3,opt,name=command,enum=platformer.Command_CommandType" json:"command,omitempty"`
+	Command Command_CommandType `protobuf:"varint,1,opt,name=command,enum=platformer.Command_CommandType" json:"command,omitempty"`
 }
 
 func (m *Command) Reset()                    { *m = Command{} }
 func (m *Command) String() string            { return proto.CompactTextString(m) }
 func (*Command) ProtoMessage()               {}
 func (*Command) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
-
-func (m *Command) GetClock() int64 {
-	if m != nil {
-		return m.Clock
-	}
-	return 0
-}
-
-func (m *Command) GetUserIdentifier() int32 {
-	if m != nil {
-		return m.UserIdentifier
-	}
-	return 0
-}
 
 func (m *Command) GetCommand() Command_CommandType {
 	if m != nil {
@@ -127,10 +114,6 @@ func (m *Command) GetCommand() Command_CommandType {
 }
 
 type Position struct {
-	// Server synchronization information
-	Clock int64 `protobuf:"varint,1,opt,name=clock" json:"clock,omitempty"`
-	// User identification data
-	UserIdentifier int32 `protobuf:"varint,2,opt,name=user_identifier,json=userIdentifier" json:"user_identifier,omitempty"`
 	// Payload
 	X    float32 `protobuf:"fixed32,3,opt,name=x" json:"x,omitempty"`
 	Y    float32 `protobuf:"fixed32,4,opt,name=y" json:"y,omitempty"`
@@ -142,20 +125,6 @@ func (m *Position) Reset()                    { *m = Position{} }
 func (m *Position) String() string            { return proto.CompactTextString(m) }
 func (*Position) ProtoMessage()               {}
 func (*Position) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
-
-func (m *Position) GetClock() int64 {
-	if m != nil {
-		return m.Clock
-	}
-	return 0
-}
-
-func (m *Position) GetUserIdentifier() int32 {
-	if m != nil {
-		return m.UserIdentifier
-	}
-	return 0
-}
 
 func (m *Position) GetX() float32 {
 	if m != nil {
@@ -185,10 +154,262 @@ func (m *Position) GetVelY() float32 {
 	return 0
 }
 
+type ClientUpdate struct {
+	// Types that are valid to be assigned to UpdatePayload:
+	//	*ClientUpdate_C
+	//	*ClientUpdate_P
+	UpdatePayload isClientUpdate_UpdatePayload `protobuf_oneof:"updatePayload"`
+}
+
+func (m *ClientUpdate) Reset()                    { *m = ClientUpdate{} }
+func (m *ClientUpdate) String() string            { return proto.CompactTextString(m) }
+func (*ClientUpdate) ProtoMessage()               {}
+func (*ClientUpdate) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+type isClientUpdate_UpdatePayload interface {
+	isClientUpdate_UpdatePayload()
+}
+
+type ClientUpdate_C struct {
+	C *Command `protobuf:"bytes,1,opt,name=c,oneof"`
+}
+type ClientUpdate_P struct {
+	P *Position `protobuf:"bytes,2,opt,name=p,oneof"`
+}
+
+func (*ClientUpdate_C) isClientUpdate_UpdatePayload() {}
+func (*ClientUpdate_P) isClientUpdate_UpdatePayload() {}
+
+func (m *ClientUpdate) GetUpdatePayload() isClientUpdate_UpdatePayload {
+	if m != nil {
+		return m.UpdatePayload
+	}
+	return nil
+}
+
+func (m *ClientUpdate) GetC() *Command {
+	if x, ok := m.GetUpdatePayload().(*ClientUpdate_C); ok {
+		return x.C
+	}
+	return nil
+}
+
+func (m *ClientUpdate) GetP() *Position {
+	if x, ok := m.GetUpdatePayload().(*ClientUpdate_P); ok {
+		return x.P
+	}
+	return nil
+}
+
+// XXX_OneofFuncs is for the internal use of the proto package.
+func (*ClientUpdate) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _ClientUpdate_OneofMarshaler, _ClientUpdate_OneofUnmarshaler, _ClientUpdate_OneofSizer, []interface{}{
+		(*ClientUpdate_C)(nil),
+		(*ClientUpdate_P)(nil),
+	}
+}
+
+func _ClientUpdate_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*ClientUpdate)
+	// updatePayload
+	switch x := m.UpdatePayload.(type) {
+	case *ClientUpdate_C:
+		b.EncodeVarint(1<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.C); err != nil {
+			return err
+		}
+	case *ClientUpdate_P:
+		b.EncodeVarint(2<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.P); err != nil {
+			return err
+		}
+	case nil:
+	default:
+		return fmt.Errorf("ClientUpdate.UpdatePayload has unexpected type %T", x)
+	}
+	return nil
+}
+
+func _ClientUpdate_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*ClientUpdate)
+	switch tag {
+	case 1: // updatePayload.c
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(Command)
+		err := b.DecodeMessage(msg)
+		m.UpdatePayload = &ClientUpdate_C{msg}
+		return true, err
+	case 2: // updatePayload.p
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(Position)
+		err := b.DecodeMessage(msg)
+		m.UpdatePayload = &ClientUpdate_P{msg}
+		return true, err
+	default:
+		return false, nil
+	}
+}
+
+func _ClientUpdate_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*ClientUpdate)
+	// updatePayload
+	switch x := m.UpdatePayload.(type) {
+	case *ClientUpdate_C:
+		s := proto.Size(x.C)
+		n += proto.SizeVarint(1<<3 | proto.WireBytes)
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *ClientUpdate_P:
+		s := proto.Size(x.P)
+		n += proto.SizeVarint(2<<3 | proto.WireBytes)
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case nil:
+	default:
+		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
+	}
+	return n
+}
+
+type ServerUpdate struct {
+	UserIdentifier int32 `protobuf:"varint,1,opt,name=user_identifier,json=userIdentifier" json:"user_identifier,omitempty"`
+	// Types that are valid to be assigned to UpdatePayload:
+	//	*ServerUpdate_C
+	//	*ServerUpdate_P
+	UpdatePayload isServerUpdate_UpdatePayload `protobuf_oneof:"updatePayload"`
+}
+
+func (m *ServerUpdate) Reset()                    { *m = ServerUpdate{} }
+func (m *ServerUpdate) String() string            { return proto.CompactTextString(m) }
+func (*ServerUpdate) ProtoMessage()               {}
+func (*ServerUpdate) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+
+type isServerUpdate_UpdatePayload interface {
+	isServerUpdate_UpdatePayload()
+}
+
+type ServerUpdate_C struct {
+	C *Command `protobuf:"bytes,2,opt,name=c,oneof"`
+}
+type ServerUpdate_P struct {
+	P *Position `protobuf:"bytes,3,opt,name=p,oneof"`
+}
+
+func (*ServerUpdate_C) isServerUpdate_UpdatePayload() {}
+func (*ServerUpdate_P) isServerUpdate_UpdatePayload() {}
+
+func (m *ServerUpdate) GetUpdatePayload() isServerUpdate_UpdatePayload {
+	if m != nil {
+		return m.UpdatePayload
+	}
+	return nil
+}
+
+func (m *ServerUpdate) GetUserIdentifier() int32 {
+	if m != nil {
+		return m.UserIdentifier
+	}
+	return 0
+}
+
+func (m *ServerUpdate) GetC() *Command {
+	if x, ok := m.GetUpdatePayload().(*ServerUpdate_C); ok {
+		return x.C
+	}
+	return nil
+}
+
+func (m *ServerUpdate) GetP() *Position {
+	if x, ok := m.GetUpdatePayload().(*ServerUpdate_P); ok {
+		return x.P
+	}
+	return nil
+}
+
+// XXX_OneofFuncs is for the internal use of the proto package.
+func (*ServerUpdate) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _ServerUpdate_OneofMarshaler, _ServerUpdate_OneofUnmarshaler, _ServerUpdate_OneofSizer, []interface{}{
+		(*ServerUpdate_C)(nil),
+		(*ServerUpdate_P)(nil),
+	}
+}
+
+func _ServerUpdate_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*ServerUpdate)
+	// updatePayload
+	switch x := m.UpdatePayload.(type) {
+	case *ServerUpdate_C:
+		b.EncodeVarint(2<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.C); err != nil {
+			return err
+		}
+	case *ServerUpdate_P:
+		b.EncodeVarint(3<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.P); err != nil {
+			return err
+		}
+	case nil:
+	default:
+		return fmt.Errorf("ServerUpdate.UpdatePayload has unexpected type %T", x)
+	}
+	return nil
+}
+
+func _ServerUpdate_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*ServerUpdate)
+	switch tag {
+	case 2: // updatePayload.c
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(Command)
+		err := b.DecodeMessage(msg)
+		m.UpdatePayload = &ServerUpdate_C{msg}
+		return true, err
+	case 3: // updatePayload.p
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(Position)
+		err := b.DecodeMessage(msg)
+		m.UpdatePayload = &ServerUpdate_P{msg}
+		return true, err
+	default:
+		return false, nil
+	}
+}
+
+func _ServerUpdate_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*ServerUpdate)
+	// updatePayload
+	switch x := m.UpdatePayload.(type) {
+	case *ServerUpdate_C:
+		s := proto.Size(x.C)
+		n += proto.SizeVarint(2<<3 | proto.WireBytes)
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *ServerUpdate_P:
+		s := proto.Size(x.P)
+		n += proto.SizeVarint(3<<3 | proto.WireBytes)
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case nil:
+	default:
+		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
+	}
+	return n
+}
+
 func init() {
 	proto.RegisterType((*UserData)(nil), "platformer.UserData")
 	proto.RegisterType((*Command)(nil), "platformer.Command")
 	proto.RegisterType((*Position)(nil), "platformer.Position")
+	proto.RegisterType((*ClientUpdate)(nil), "platformer.ClientUpdate")
+	proto.RegisterType((*ServerUpdate)(nil), "platformer.ServerUpdate")
 	proto.RegisterEnum("platformer.Command_CommandType", Command_CommandType_name, Command_CommandType_value)
 }
 
@@ -203,9 +424,8 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for GameServer service
 
 type GameServerClient interface {
-	// Users stream in their position updates, and recieve the updates from other users
-	PositionUpdates(ctx context.Context, opts ...grpc.CallOption) (GameServer_PositionUpdatesClient, error)
-	CommandUpdates(ctx context.Context, opts ...grpc.CallOption) (GameServer_CommandUpdatesClient, error)
+	// Users stream in their position & command updates, and recieve the updates from other users
+	Connect(ctx context.Context, opts ...grpc.CallOption) (GameServer_ConnectClient, error)
 	// Get information about a user (Name, avatar, etc.)
 	// Only the user_identifier need be filled in
 	UserInformation(ctx context.Context, in *UserData, opts ...grpc.CallOption) (*UserData, error)
@@ -219,62 +439,31 @@ func NewGameServerClient(cc *grpc.ClientConn) GameServerClient {
 	return &gameServerClient{cc}
 }
 
-func (c *gameServerClient) PositionUpdates(ctx context.Context, opts ...grpc.CallOption) (GameServer_PositionUpdatesClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_GameServer_serviceDesc.Streams[0], c.cc, "/platformer.GameServer/PositionUpdates", opts...)
+func (c *gameServerClient) Connect(ctx context.Context, opts ...grpc.CallOption) (GameServer_ConnectClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_GameServer_serviceDesc.Streams[0], c.cc, "/platformer.GameServer/Connect", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &gameServerPositionUpdatesClient{stream}
+	x := &gameServerConnectClient{stream}
 	return x, nil
 }
 
-type GameServer_PositionUpdatesClient interface {
-	Send(*Position) error
-	Recv() (*Position, error)
+type GameServer_ConnectClient interface {
+	Send(*ClientUpdate) error
+	Recv() (*ServerUpdate, error)
 	grpc.ClientStream
 }
 
-type gameServerPositionUpdatesClient struct {
+type gameServerConnectClient struct {
 	grpc.ClientStream
 }
 
-func (x *gameServerPositionUpdatesClient) Send(m *Position) error {
+func (x *gameServerConnectClient) Send(m *ClientUpdate) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *gameServerPositionUpdatesClient) Recv() (*Position, error) {
-	m := new(Position)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *gameServerClient) CommandUpdates(ctx context.Context, opts ...grpc.CallOption) (GameServer_CommandUpdatesClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_GameServer_serviceDesc.Streams[1], c.cc, "/platformer.GameServer/CommandUpdates", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &gameServerCommandUpdatesClient{stream}
-	return x, nil
-}
-
-type GameServer_CommandUpdatesClient interface {
-	Send(*Command) error
-	Recv() (*Command, error)
-	grpc.ClientStream
-}
-
-type gameServerCommandUpdatesClient struct {
-	grpc.ClientStream
-}
-
-func (x *gameServerCommandUpdatesClient) Send(m *Command) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *gameServerCommandUpdatesClient) Recv() (*Command, error) {
-	m := new(Command)
+func (x *gameServerConnectClient) Recv() (*ServerUpdate, error) {
+	m := new(ServerUpdate)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -293,9 +482,8 @@ func (c *gameServerClient) UserInformation(ctx context.Context, in *UserData, op
 // Server API for GameServer service
 
 type GameServerServer interface {
-	// Users stream in their position updates, and recieve the updates from other users
-	PositionUpdates(GameServer_PositionUpdatesServer) error
-	CommandUpdates(GameServer_CommandUpdatesServer) error
+	// Users stream in their position & command updates, and recieve the updates from other users
+	Connect(GameServer_ConnectServer) error
 	// Get information about a user (Name, avatar, etc.)
 	// Only the user_identifier need be filled in
 	UserInformation(context.Context, *UserData) (*UserData, error)
@@ -305,52 +493,26 @@ func RegisterGameServerServer(s *grpc.Server, srv GameServerServer) {
 	s.RegisterService(&_GameServer_serviceDesc, srv)
 }
 
-func _GameServer_PositionUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(GameServerServer).PositionUpdates(&gameServerPositionUpdatesServer{stream})
+func _GameServer_Connect_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(GameServerServer).Connect(&gameServerConnectServer{stream})
 }
 
-type GameServer_PositionUpdatesServer interface {
-	Send(*Position) error
-	Recv() (*Position, error)
+type GameServer_ConnectServer interface {
+	Send(*ServerUpdate) error
+	Recv() (*ClientUpdate, error)
 	grpc.ServerStream
 }
 
-type gameServerPositionUpdatesServer struct {
+type gameServerConnectServer struct {
 	grpc.ServerStream
 }
 
-func (x *gameServerPositionUpdatesServer) Send(m *Position) error {
+func (x *gameServerConnectServer) Send(m *ServerUpdate) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *gameServerPositionUpdatesServer) Recv() (*Position, error) {
-	m := new(Position)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func _GameServer_CommandUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(GameServerServer).CommandUpdates(&gameServerCommandUpdatesServer{stream})
-}
-
-type GameServer_CommandUpdatesServer interface {
-	Send(*Command) error
-	Recv() (*Command, error)
-	grpc.ServerStream
-}
-
-type gameServerCommandUpdatesServer struct {
-	grpc.ServerStream
-}
-
-func (x *gameServerCommandUpdatesServer) Send(m *Command) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *gameServerCommandUpdatesServer) Recv() (*Command, error) {
-	m := new(Command)
+func (x *gameServerConnectServer) Recv() (*ClientUpdate, error) {
+	m := new(ClientUpdate)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -386,14 +548,8 @@ var _GameServer_serviceDesc = grpc.ServiceDesc{
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "PositionUpdates",
-			Handler:       _GameServer_PositionUpdates_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "CommandUpdates",
-			Handler:       _GameServer_CommandUpdates_Handler,
+			StreamName:    "Connect",
+			Handler:       _GameServer_Connect_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
@@ -404,29 +560,32 @@ var _GameServer_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("platformer.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 378 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x92, 0xcd, 0x6e, 0xda, 0x40,
-	0x10, 0xc7, 0x59, 0x63, 0xf3, 0x31, 0x20, 0xbc, 0x5a, 0x38, 0x58, 0x5c, 0x8a, 0x7c, 0xa9, 0x4f,
-	0xa8, 0xa2, 0xa7, 0x9e, 0x5a, 0x84, 0x29, 0x75, 0x5b, 0x91, 0xc4, 0x59, 0x4b, 0x89, 0x72, 0x40,
-	0x1b, 0x58, 0x24, 0x2b, 0xfe, 0xd2, 0xda, 0x41, 0xf8, 0x29, 0xf2, 0x72, 0x79, 0x80, 0x3c, 0x4a,
-	0xe4, 0x2f, 0xe2, 0x83, 0x6f, 0x39, 0xed, 0xcc, 0x6f, 0x66, 0xff, 0xbb, 0xf3, 0xd7, 0x00, 0x8e,
-	0x3c, 0x96, 0x1c, 0x43, 0xe1, 0x73, 0x31, 0x8f, 0x44, 0x98, 0x84, 0x04, 0x3e, 0x88, 0xbe, 0x81,
-	0x9e, 0x13, 0x73, 0x61, 0xb2, 0x84, 0x91, 0xaf, 0xa0, 0x3e, 0xc7, 0x5c, 0xec, 0xdc, 0x03, 0x0f,
-	0x12, 0xf7, 0xe8, 0x72, 0xa1, 0xa1, 0x19, 0x32, 0x14, 0x7b, 0x94, 0x61, 0xeb, 0x42, 0x09, 0x01,
-	0x39, 0x60, 0x3e, 0xd7, 0xa4, 0x19, 0x32, 0xfa, 0x76, 0x1e, 0xeb, 0x6f, 0x08, 0xba, 0xab, 0xd0,
-	0xf7, 0x59, 0x70, 0x20, 0x13, 0x50, 0xf6, 0x5e, 0xb8, 0x7f, 0xca, 0xaf, 0xb7, 0xed, 0x22, 0x69,
-	0x92, 0x97, 0x1a, 0xe5, 0x7f, 0x40, 0x77, 0x5f, 0x28, 0x69, 0xed, 0x19, 0x32, 0x46, 0x8b, 0x2f,
-	0xf3, 0xda, 0x0c, 0xe5, 0x23, 0xd5, 0x49, 0xd3, 0x88, 0xdb, 0x55, 0xbf, 0xfe, 0x00, 0x83, 0x1a,
-	0x27, 0x3d, 0x90, 0x4d, 0x6b, 0x6d, 0xe2, 0x56, 0x16, 0xdd, 0x38, 0x16, 0xc5, 0x88, 0x00, 0x74,
-	0xfe, 0x5e, 0x59, 0xdb, 0xb5, 0x89, 0x25, 0xd2, 0x07, 0x85, 0x2e, 0x9d, 0x2d, 0xc5, 0x6d, 0xa2,
-	0xc2, 0x60, 0x49, 0xe9, 0x72, 0xf5, 0x6f, 0xf7, 0x7f, 0xfd, 0x9b, 0x62, 0x99, 0x60, 0x18, 0x96,
-	0xc0, 0xb6, 0x36, 0x7f, 0x28, 0x56, 0xf4, 0x17, 0x04, 0xbd, 0xeb, 0x30, 0x76, 0x13, 0x37, 0x0c,
-	0x3e, 0x3b, 0xe3, 0x10, 0xd0, 0x39, 0x9f, 0x4e, 0xb2, 0xd1, 0x39, 0xcb, 0x52, 0x4d, 0x2e, 0xb2,
-	0x94, 0x8c, 0x41, 0x39, 0x71, 0x6f, 0x77, 0xd6, 0x94, 0x9c, 0xc8, 0x27, 0xee, 0xdd, 0x55, 0x30,
-	0xd5, 0x3a, 0x17, 0x78, 0xbf, 0x78, 0x45, 0x00, 0x1b, 0xe6, 0xf3, 0x5b, 0x2e, 0x4e, 0x5c, 0x90,
-	0x15, 0xa8, 0xd5, 0xff, 0x9c, 0xe8, 0xc0, 0x12, 0x1e, 0x93, 0x49, 0xdd, 0xba, 0xaa, 0x38, 0x6d,
-	0xa4, 0x7a, 0xcb, 0x40, 0xdf, 0x10, 0xf9, 0x05, 0xa3, 0xd2, 0xc2, 0x4a, 0x63, 0xdc, 0x60, 0xff,
-	0xb4, 0x09, 0x96, 0x0a, 0x3f, 0x41, 0xcd, 0x76, 0xca, 0x0a, 0xb2, 0x2a, 0x2b, 0xdc, 0xaa, 0x77,
-	0x57, 0x0b, 0x37, 0x6d, 0xa4, 0x7a, 0xeb, 0xb1, 0x93, 0xef, 0xe9, 0xf7, 0xf7, 0x00, 0x00, 0x00,
-	0xff, 0xff, 0x9e, 0xc4, 0xb1, 0x7f, 0xbb, 0x02, 0x00, 0x00,
+	// 424 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x92, 0xc1, 0x6e, 0xd3, 0x40,
+	0x10, 0x86, 0xb3, 0x89, 0x9d, 0xa6, 0x93, 0xd0, 0xac, 0xa6, 0x1c, 0xac, 0x5e, 0x88, 0x0c, 0x12,
+	0x39, 0x55, 0x28, 0x9c, 0x38, 0xa1, 0x90, 0x84, 0xd4, 0x05, 0x4a, 0x30, 0xb6, 0x04, 0xa7, 0x68,
+	0x49, 0xa6, 0x92, 0x91, 0xbd, 0xb6, 0x36, 0xdb, 0x28, 0x7e, 0x0d, 0x78, 0x0c, 0x5e, 0x12, 0xed,
+	0x26, 0x2e, 0x8e, 0xd4, 0x43, 0x39, 0x79, 0xf6, 0xf3, 0xaf, 0xd9, 0x7f, 0x76, 0x7e, 0xe0, 0x45,
+	0x2a, 0xf4, 0x6d, 0xae, 0x32, 0x52, 0x97, 0x85, 0xca, 0x75, 0x8e, 0xf0, 0x8f, 0xf8, 0x73, 0xe8,
+	0xc4, 0x1b, 0x52, 0x53, 0xa1, 0x05, 0xbe, 0x84, 0xfe, 0xdd, 0x86, 0xd4, 0x32, 0x59, 0x93, 0xd4,
+	0xc9, 0x6d, 0x42, 0xca, 0x63, 0x03, 0x36, 0x74, 0xc3, 0x33, 0x83, 0x83, 0x7b, 0x8a, 0x08, 0x8e,
+	0x14, 0x19, 0x79, 0xcd, 0x01, 0x1b, 0x9e, 0x86, 0xb6, 0xf6, 0xff, 0x30, 0x38, 0x99, 0xe4, 0x59,
+	0x26, 0xe4, 0x1a, 0xdf, 0xc0, 0xc9, 0x6a, 0x5f, 0xda, 0x06, 0x67, 0xa3, 0x67, 0x97, 0x35, 0x13,
+	0x07, 0x55, 0xf5, 0x8d, 0xca, 0x82, 0xc2, 0x4a, 0xef, 0x13, 0x74, 0x6b, 0x1c, 0x3b, 0xe0, 0x4c,
+	0x83, 0xd9, 0x94, 0x37, 0x4c, 0xf5, 0x25, 0x0e, 0x22, 0xce, 0x10, 0xa0, 0x7d, 0xfd, 0x39, 0xb8,
+	0x99, 0x4d, 0x79, 0x13, 0x4f, 0xc1, 0x8d, 0xc6, 0xf1, 0x4d, 0xc4, 0x5b, 0xd8, 0x87, 0xee, 0x38,
+	0x8a, 0xc6, 0x93, 0x0f, 0xcb, 0x8f, 0xb3, 0xf7, 0x11, 0x77, 0x90, 0x43, 0xef, 0x00, 0xc2, 0x60,
+	0x7e, 0x15, 0x71, 0xd7, 0xf4, 0xb8, 0x8e, 0x3f, 0x2d, 0x78, 0xdb, 0x5f, 0x40, 0x67, 0x91, 0x6f,
+	0x12, 0x9d, 0xe4, 0x12, 0x7b, 0xc0, 0x76, 0x5e, 0x6b, 0xc0, 0x86, 0xcd, 0x90, 0xed, 0xcc, 0xa9,
+	0xf4, 0x9c, 0xfd, 0xa9, 0xc4, 0x73, 0x70, 0xb7, 0x94, 0x2e, 0x77, 0x9e, 0x6b, 0x89, 0xb3, 0xa5,
+	0xf4, 0x5b, 0x05, 0x4b, 0xaf, 0x7d, 0x0f, 0xbf, 0xfb, 0x3f, 0xa1, 0x37, 0x49, 0x13, 0x92, 0x3a,
+	0x2e, 0xd6, 0x42, 0x13, 0x3e, 0x07, 0xb6, 0xb2, 0xd3, 0x77, 0x47, 0xe7, 0x0f, 0x4c, 0x7f, 0xd5,
+	0x08, 0xd9, 0x0a, 0x5f, 0x00, 0x2b, 0xec, 0x2b, 0x76, 0x47, 0x4f, 0xeb, 0xa2, 0xca, 0x9b, 0x51,
+	0x15, 0xef, 0xfa, 0xf0, 0xe4, 0xce, 0x36, 0x5d, 0x88, 0x32, 0xcd, 0xc5, 0xda, 0xff, 0xcd, 0xa0,
+	0xf7, 0x95, 0xd4, 0x96, 0xd4, 0xe1, 0xb2, 0x47, 0x6f, 0xce, 0xba, 0x6a, 0x3e, 0xc6, 0x55, 0xeb,
+	0x7f, 0x5d, 0x8d, 0x7e, 0x31, 0x80, 0xb9, 0xc8, 0x68, 0xef, 0x0c, 0x27, 0x26, 0x0f, 0x52, 0xd2,
+	0x4a, 0xa3, 0x77, 0x74, 0x55, 0xed, 0x95, 0x2e, 0x8e, 0xfe, 0xd4, 0x47, 0xf2, 0x1b, 0x43, 0xf6,
+	0x8a, 0xe1, 0x5b, 0xe8, 0x9b, 0x78, 0x06, 0xd2, 0x48, 0x84, 0x5d, 0xd7, 0x91, 0xa5, 0x2a, 0xbb,
+	0x17, 0x0f, 0x52, 0xbf, 0xf1, 0xa3, 0x6d, 0x23, 0xff, 0xfa, 0x6f, 0x00, 0x00, 0x00, 0xff, 0xff,
+	0x5f, 0x28, 0x25, 0x25, 0x06, 0x03, 0x00, 0x00,
 }
