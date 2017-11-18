@@ -11,8 +11,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"./auth"
-	"./platformer"
+	"github.com/grevian/GoGame/server/auth"
+	"github.com/grevian/GoGame/server/platformer"
 )
 
 func main() {
