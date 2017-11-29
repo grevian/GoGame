@@ -89,12 +89,32 @@ func (g *GameServer) Connect(updateStream pb.GameServer_ConnectServer) error {
 					},
 				},
 			})
+
+			player.ServerUpdate(&pb.ServerUpdate{
+				UserIdentifier: user_id,
+				UpdatePayload: &pb.ServerUpdate_P{
+					P: &pb.Position{
+						X: float32(character.position.X),
+						Y: float32(character.position.Y),
+					},
+				},
+			})
+
 			// Tell the player about other existing players
 			character.ServerUpdate(&pb.ServerUpdate{
 				UserIdentifier: player.user.id,
 				UpdatePayload: &pb.ServerUpdate_C{
 					C: &pb.Command{
 						Command: pb.Command_JOINED,
+					},
+				},
+			})
+			character.ServerUpdate(&pb.ServerUpdate{
+				UserIdentifier: player.user.id,
+				UpdatePayload: &pb.ServerUpdate_P{
+					P: &pb.Position{
+						X: float32(player.position.X),
+						Y: float32(player.position.Y),
 					},
 				},
 			})
