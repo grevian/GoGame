@@ -98,11 +98,24 @@ func (c *Character) positionUpdate(position *pb.Position) {
 			"actual_skew_y":  skew_y,
 			"user":           c.user.name,
 		}).Error("Position Update skewed too far, rejecting update and correcting client")
-
-		// c.clientUpdates.Send(	)
-		// TODO send a correction to the client
-		return
+		// TODO Calculate corrected X/Y values
+		/*
+		c.clientUpdates.Send(
+			&pb.ServerUpdate{
+				c.user.id,
+				&pb.ServerUpdate_P{
+					P: &pb.Position{
+						X: 0,
+						Y: 0,
+					},
+				},
+			},
+		)*/
+		// return // Don't really reject anything yet
 	}
+
+	c.position.X = float64(position.X)
+	c.position.Y = float64(position.Y)
 
 	// Apply position update force vectors
 	// TODO Probably worth sanity checking these too
