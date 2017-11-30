@@ -17,8 +17,6 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-const AUTHSERVER_ADDRESS = "localhost:8078"
-
 type AuthServiceTokenFetcher struct {
 	authClient     pb_auth.AuthServerClient
 	jwtPublicKey   *rsa.PublicKey
@@ -52,14 +50,14 @@ func (n *AuthServiceTokenFetcher) updateToken(JWT *pb_auth.JWT) error {
 	return nil
 }
 
-func NewAuthServiceTokenFetcher(userCredentials *pb_auth.Credentials, transportCredentials credentials.TransportCredentials, jwtPublicKeyPath *string) (credentials.PerRPCCredentials, error) {
+func NewAuthServiceTokenFetcher(authserver_address *string, userCredentials *pb_auth.Credentials, transportCredentials credentials.TransportCredentials, jwtPublicKeyPath *string) (credentials.PerRPCCredentials, error) {
 	// Dial our authorization service
-	conn, err := grpc.Dial(AUTHSERVER_ADDRESS,
+	conn, err := grpc.Dial(authserver_address,
 		grpc.WithTransportCredentials(transportCredentials),
 	)
 
 	if err != nil {
-		log.WithField("Authserver", AUTHSERVER_ADDRESS).WithError(err).Error("Could not access auth server")
+		log.WithField("Authserver", authserver_address).WithError(err).Error("Could not access auth server")
 		return nil, err
 	}
 

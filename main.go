@@ -8,5 +8,7 @@ import (
 
 func main() {
 	log.Print("Starting up")
-	client.NewClient()
+	var serverAddr = flag.String("server-addr", "gogame.grevian.org:8077", "gameserver address")
+	flag.Parse()
+	client.NewClient(serverAddr)
 }

@@ -15,8 +15,6 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-const GAMESERVER_ADDRESS = "localhost:8077"
-
 type NetworkClient struct {
 	tlsCredentials credentials.TransportCredentials
 	rpcCredentials credentials.PerRPCCredentials
@@ -64,8 +62,10 @@ func (p *Player) Draw(screen *ebiten.Image) {
 	screen.DrawImage(p.image, p.op)
 }
 
-func NewNetworkClient(username *string, password *string, certPath *string, jwtPublicKeyPath *string) (*NetworkClient, error) {
+func NewNetworkClient(username *string, password *string, gameserver_address *string, certPath *string, jwtPublicKeyPath *string) (*NetworkClient, error) {
 	log.Info("Connecting to Network")
+  authserver_address = gameserver_address + ":8078"
+  platformer_address = gameserver_address + ":8077"
 
 	// Load our CA Information for transport security
 	rawCACert, err := ioutil.ReadFile(*certPath)
@@ -82,20 +82,20 @@ func NewNetworkClient(username *string, password *string, certPath *string, jwtP
 	})
 
 	// Instantiate a client for the auth service, that will fetch per-request credentials
-	authTokenFetcher, err := NewAuthServiceTokenFetcher(&pb_auth.Credentials{Username: *username, Password: *password}, transportCredentials, jwtPublicKeyPath)
+	authTokenFetcher, err := NewAuthServiceTokenFetcher(authserver_address, &pb_auth.Credentials{Username: *username, Password: *password}, transportCredentials, jwtPublicKeyPath)
 	if err != nil {
 		log.WithError(err).Error("Could not construct auth service token fetcher")
 		return nil, err
 	}
 
 	// Dial the game server with all our credentials in place
-	conn, err := grpc.Dial(GAMESERVER_ADDRESS,
+	conn, err := grpc.Dial(platformer_address,
 		grpc.WithTransportCredentials(transportCredentials),
 		grpc.WithPerRPCCredentials(authTokenFetcher),
 	)
 
 	if err != nil {
-		log.WithField("GAMESERVER_ADDRESS", GAMESERVER_ADDRESS).WithError(err).Error("Could not access game server")
+		log.WithField("GAMESERVER_ADDRESS", platformer_address).WithError(err).Error("Could not access game server")
 		return nil, err
 	}
 
