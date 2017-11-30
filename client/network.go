@@ -64,8 +64,8 @@ func (p *Player) Draw(screen *ebiten.Image) {
 
 func NewNetworkClient(username *string, password *string, gameserver_address *string, certPath *string, jwtPublicKeyPath *string) (*NetworkClient, error) {
 	log.Info("Connecting to Network")
-  authserver_address = gameserver_address + ":8078"
-  platformer_address = gameserver_address + ":8077"
+  var authserver_address = *gameserver_address + ":8078"
+  var platformer_address = *gameserver_address + ":8077"
 
 	// Load our CA Information for transport security
 	rawCACert, err := ioutil.ReadFile(*certPath)
@@ -82,7 +82,7 @@ func NewNetworkClient(username *string, password *string, gameserver_address *st
 	})
 
 	// Instantiate a client for the auth service, that will fetch per-request credentials
-	authTokenFetcher, err := NewAuthServiceTokenFetcher(authserver_address, &pb_auth.Credentials{Username: *username, Password: *password}, transportCredentials, jwtPublicKeyPath)
+	authTokenFetcher, err := NewAuthServiceTokenFetcher(&authserver_address, &pb_auth.Credentials{Username: *username, Password: *password}, transportCredentials, jwtPublicKeyPath)
 	if err != nil {
 		log.WithError(err).Error("Could not construct auth service token fetcher")
 		return nil, err

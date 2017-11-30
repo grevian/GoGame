@@ -52,7 +52,7 @@ func (n *AuthServiceTokenFetcher) updateToken(JWT *pb_auth.JWT) error {
 
 func NewAuthServiceTokenFetcher(authserver_address *string, userCredentials *pb_auth.Credentials, transportCredentials credentials.TransportCredentials, jwtPublicKeyPath *string) (credentials.PerRPCCredentials, error) {
 	// Dial our authorization service
-	conn, err := grpc.Dial(authserver_address,
+	conn, err := grpc.Dial(*authserver_address,
 		grpc.WithTransportCredentials(transportCredentials),
 	)
 
