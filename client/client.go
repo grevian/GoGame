@@ -56,7 +56,7 @@ func NewClient(network_server *string) {
 	}
 	network = gnetwork
 
-	ebiten.SetRunnableInBackground(true)
+//	ebiten.SetRunnableInBackground(true)
 	if err := ebiten.Run(update, 800, 600, 2, "Little Platformer"); err != nil {
 		log.WithError(err).Fatal("Ebiten Stopped unexpectedly!")
 	}
