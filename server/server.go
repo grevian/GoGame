@@ -21,10 +21,10 @@ func main() {
 	var (
 		listenAddr    = flag.String("listen-addr", "0.0.0.0:8077", "HTTP listen address.")
 		authAddr      = flag.String("auth-listen-addr", "0.0.0.0:8078", "HTTP listen address.")
-		tlsCert       = flag.String("tls-cert", "/cert.pem", "TLS server certificate.")
-		tlsKey        = flag.String("tls-key", "/key.pem", "TLS server key.")
-		jwtPublicKey  = flag.String("jwt-public-key", "certs/jwt.pub.pem", "The JWT RSA public key.")
-		jwtPrivateKey = flag.String("jwt-private-key", "certs/jwt.key", "The JWT RSA private key.")
+		tlsCert       = flag.String("tls-cert", "/certs/server.crt", "TLS server certificate.")
+		tlsKey        = flag.String("tls-key", "/certs/server.key", "TLS server key.")
+		jwtPublicKey  = flag.String("jwt-public-key", "/certs/jwt.pub.pem", "The JWT RSA public key.")
+		jwtPrivateKey = flag.String("jwt-private-key", "/certs/jwt.key", "The JWT RSA private key.")
 	)
 	flag.Parse()
 
