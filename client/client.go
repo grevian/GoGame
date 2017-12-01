@@ -42,7 +42,7 @@ func reset() {
 	usersCharacter = NewCharacter(color.RGBA{0, 255, 0, 128}, 140, 310)
 }
 
-func NewClient() {
+func NewClient(network_server *string) {
 
 	reset()
 	username := "grevian"
@@ -50,7 +50,7 @@ func NewClient() {
 	certpath := "certs/server.crt"
 	pubkey := "certs/jwt.pub.pem"
 
-	gnetwork, err := NewNetworkClient(&username, &password, &certpath, &pubkey)
+	gnetwork, err := NewNetworkClient(&username, &password, network_server, &certpath, &pubkey)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to connect to network")
 	}
