@@ -1,9 +1,8 @@
-package main
+package platformer
 
 import (
 	"crypto/tls"
 	"flag"
-
 	"net"
 
 	log "github.com/Sirupsen/logrus"
@@ -11,7 +10,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/grevian/GoGame/server/auth"
 	"github.com/grevian/GoGame/server/platformer"
 )
 
@@ -20,11 +18,9 @@ func main() {
 
 	var (
 		listenAddr    = flag.String("listen-addr", "0.0.0.0:8077", "HTTP listen address.")
-		authAddr      = flag.String("auth-listen-addr", "0.0.0.0:8078", "HTTP listen address.")
 		tlsCert       = flag.String("tls-cert", "/certs/server.crt", "TLS server certificate.")
 		tlsKey        = flag.String("tls-key", "/certs/server.key", "TLS server key.")
 		jwtPublicKey  = flag.String("jwt-public-key", "/certs/jwt.pub.pem", "The JWT RSA public key.")
-		jwtPrivateKey = flag.String("jwt-private-key", "/certs/jwt.key", "The JWT RSA private key.")
 	)
 	flag.Parse()
 
@@ -42,23 +38,6 @@ func main() {
 		InsecureSkipVerify: true,
 		Certificates:       []tls.Certificate{cert},
 	})
-
-	// Create our Authorization server
-	authService, err := auth.NewAuthServer(jwtPrivateKey, transportCredentials)
-
-	// Serve our auth service on the network
-	aln, err := net.Listen("tcp", *authAddr)
-	if err != nil {
-		log.WithField("authAddr", *authAddr).WithError(err).Fatal("Failed to start listening on the network")
-	}
-	go func() {
-		log.Info("Starting to serve Auth Service")
-		err := authService.Serve(aln)
-		if err != nil {
-			log.WithError(err).Error("Auth Service stopped unexpectedly")
-		}
-		log.Info("Auth Service stopped")
-	}()
 
 	// Create an instance of our game service
 	gs, err := platformer.NewGameServer(*jwtPublicKey, transportCredentials)

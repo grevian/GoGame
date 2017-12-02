@@ -1,24 +1,20 @@
-package auth
+package service
 
 import (
 	"crypto/rsa"
 	"errors"
-	"fmt"
-	"io/ioutil"
-	"net"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/dgrijalva/jwt-go"
-	pb_auth "github.com/grevian/GoGame/common/auth"
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
+
+	pbAuth "github.com/grevian/GoGame/common/auth"
 )
 
 type AuthorizationServer struct {
-	jwtPrivateKey        *rsa.PrivateKey
-	transportCredentials credentials.TransportCredentials
+	jwtPrivateKey *rsa.PrivateKey
+	stop          chan bool
 
 	TOKEN_EXPIRATION_DURATION time.Duration
 	TOKEN_REFRESH_DURATION    time.Duration
@@ -31,26 +27,14 @@ const (
 	SKEW_NBF_DURATION_STR         = "1m"
 )
 
-func NewAuthServer(rsaPrivateKeyPath *string, transportCredentials credentials.TransportCredentials) (*AuthorizationServer, error) {
-	// Load the jwt private key that will be used to sign issued tokens
-	privateKeyData, err := ioutil.ReadFile(*rsaPrivateKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading the jwt public key: %v", err)
-	}
-
-	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKeyData)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing the jwt public key: %s", err)
-	}
-
-	// If any errors happen here, we're too screwed to even try and stop
+func NewAuthServer(privateKey *rsa.PrivateKey) (*AuthorizationServer, error) {
 	refreshDuration, _ := time.ParseDuration(TOKEN_REFRESH_DURATION_STR)
 	expirationDuration, _ := time.ParseDuration(TOKEN_EXPIRATION_DURATION_STR)
 	ndfDuration, _ := time.ParseDuration(SKEW_NBF_DURATION_STR)
 
 	authServer := &AuthorizationServer{
-		jwtPrivateKey:             privateKey,
-		transportCredentials:      transportCredentials,
+		jwtPrivateKey: privateKey,
+		stop:          make(chan bool),
 		TOKEN_REFRESH_DURATION:    refreshDuration,
 		TOKEN_EXPIRATION_DURATION: expirationDuration,
 		SKEW_NBF_DURATION:         ndfDuration,
@@ -59,10 +43,9 @@ func NewAuthServer(rsaPrivateKeyPath *string, transportCredentials credentials.T
 	return authServer, nil
 }
 
-func (a *AuthorizationServer) Serve(listener net.Listener) error {
-	s := grpc.NewServer(grpc.Creds(a.transportCredentials))
-	pb_auth.RegisterAuthServerServer(s, a)
-	return s.Serve(listener)
+func (a *AuthorizationServer) GracefulStop() {
+	// Tell requests in progress to wrap up
+	close(a.stop)
 }
 
 func (a *AuthorizationServer) createTokenString(claims jwt.MapClaims) (string, error) {
@@ -88,7 +71,7 @@ func (a *AuthorizationServer) authorizeUser(username string, password string) (m
 	return userData, nil
 }
 
-func (a *AuthorizationServer) Authorize(c *pb_auth.Credentials, tokenStream pb_auth.AuthServer_AuthorizeServer) error {
+func (a *AuthorizationServer) Authorize(c *pbAuth.Credentials, tokenStream pbAuth.AuthServer_AuthorizeServer) error {
 	userData, err := a.authorizeUser(c.Username, c.Password)
 	if err != nil {
 		log.WithError(err).WithField("Username", c.Username).Warn("User Authentication Failed")
@@ -103,7 +86,6 @@ func (a *AuthorizationServer) Authorize(c *pb_auth.Credentials, tokenStream pb_a
 	}
 
 	// Send a refreshed token every time the users token is about to expire
-	// TODO Also associate a semaphore or channel with the users session to support Logout cancelling this loop
 	for {
 		tokenString, err := a.createTokenString(startingClaims)
 		if err != nil {
@@ -112,17 +94,23 @@ func (a *AuthorizationServer) Authorize(c *pb_auth.Credentials, tokenStream pb_a
 		}
 
 		log.WithFields(log.Fields{"user": "grevian", "tokenStr": tokenString}).Info("Issuing a token")
-		err = tokenStream.Send(&pb_auth.JWT{Token: tokenString})
+		err = tokenStream.Send(&pbAuth.JWT{Token: tokenString})
 		if err != nil {
 			log.WithError(err).Error("Failed to write a signed token to the tokenStream")
 			return err
 		}
-		<-time.After(a.TOKEN_REFRESH_DURATION)
+		select {
+		case <-time.After(a.TOKEN_REFRESH_DURATION):
+			continue
+		case _ = <-a.stop:
+			return errors.New("authorization service was stopped")
+		}
+
 	}
 	return nil
 }
 
-func (a *AuthorizationServer) Logout(context.Context, *pb_auth.JWT) (response *pb_auth.LogoutResponse, e error) {
+func (a *AuthorizationServer) Logout(context.Context, *pbAuth.JWT) (response *pbAuth.LogoutResponse, e error) {
 	log.Error("Logout called, but is not implemented")
-	return &pb_auth.LogoutResponse{}, nil
+	return &pbAuth.LogoutResponse{}, nil
 }
