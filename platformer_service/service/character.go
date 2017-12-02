@@ -1,4 +1,4 @@
-package platformer
+package service
 
 import (
 	"io"

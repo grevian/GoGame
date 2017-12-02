@@ -1,4 +1,4 @@
-package platformer
+package platformer_service
 
 import (
 	"crypto/tls"
@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/grevian/GoGame/server/platformer"
+	platformer "github.com/grevian/GoGame/platformer_service/service"
 )
 
 func main() {
