@@ -1,7 +1,7 @@
 FROM alpine:3.5
 
 WORKDIR /
-COPY gopath/bin/auth_service /
+COPY /workspace/gopath/bin/auth_service /
 
 EXPOSE 80 443
 
