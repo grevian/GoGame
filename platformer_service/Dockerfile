@@ -1,7 +1,7 @@
 FROM alpine:3.5
 
 WORKDIR /
-COPY /workspace/gopath/bin/platformer_service /
+COPY ./platformer_service /
 
 EXPOSE 80 443
 
