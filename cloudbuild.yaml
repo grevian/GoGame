@@ -1,6 +1,6 @@
 steps:
 - name: 'gcr.io/cloud-builders/go'
-  args: ['build', 'github.com/grevian/GoGame/platformer_service']
+  args: ['install', 'github.com/grevian/GoGame/platformer_service']
   env: ['PROJECT_ROOT=github.com/grevian/GoGame/platformer_service']
 - name: 'gcr.io/cloud-builders/go'
   args: ['install', 'github.com/grevian/GoGame/auth_service']
