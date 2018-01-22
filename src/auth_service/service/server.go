@@ -15,7 +15,6 @@ import (
 type AuthorizationServer struct {
 	jwtPrivateKey *rsa.PrivateKey
 	stop          chan bool
-
 	TOKEN_EXPIRATION_DURATION time.Duration
 	TOKEN_REFRESH_DURATION    time.Duration
 	SKEW_NBF_DURATION         time.Duration
