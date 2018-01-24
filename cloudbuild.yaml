@@ -15,4 +15,3 @@ steps:
   waitFor: "build_platformer"
 images: ['gcr.io/$PROJECT_ID/gogame-auth']
 images: ['gcr.io/$PROJECT_ID/gogame-platformer']
-
